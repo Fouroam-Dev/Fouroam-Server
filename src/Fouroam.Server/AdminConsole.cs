@@ -19,14 +19,19 @@ public static class AdminConsole
         ServerHost server, string input, Action<string> output,
         CancellationToken token = default)
     {
-        var parts = input.Trim().Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+        var command = input.Trim();
+        // Friendly optional slash, familiar from game server consoles.
+        if (command.StartsWith('/')) command = command[1..].TrimStart();
+
+        var parts = command.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 0) return true;
 
         switch (parts[0].ToLowerInvariant())
         {
             case "help":
-                output("Commands: help, status, players, kick <id> [reason], ban <id> [reason],");
-                output("          bans, unban <fingerprint-prefix>, say <message>, stop");
+                output("Commands (optional /): help, status, players, kick <id|name> [reason],");
+                output("          ban <id|name> [reason], bans, unban <fingerprint-prefix>,");
+                output("          say <message>, stop");
                 break;
 
             case "status":
@@ -43,16 +48,53 @@ public static class AdminConsole
 
             case "kick":
             case "ban":
-                if (parts.Length < 2 || !int.TryParse(parts[1], out int id) || id < 1)
+                var arguments = command[parts[0].Length..].Trim();
+                if (arguments.Length == 0)
                 {
-                    output($"Usage: {parts[0]} <player-id> [reason]");
+                    output($"Usage: {parts[0]} <player-id|player-name> [reason]");
                     break;
                 }
 
-                var reason = parts.Length > 2 ? parts[2].Trim() : "Removed by host";
-                if (reason.Length is < 1 or > 200 || reason.Any(char.IsControl))
+                int id;
+                string reason;
+                var firstSpace = arguments.IndexOf(' ');
+                string firstToken = firstSpace >= 0 ? arguments[..firstSpace] : arguments;
+
+                if (int.TryParse(firstToken.TrimStart('#'), out int numericId) && numericId > 0)
                 {
-                    output("Reason must have 1-200 printable characters.");
+                    id = numericId;
+                    reason = firstSpace >= 0 ? arguments[(firstSpace + 1)..].Trim() : "";
+                }
+                else
+                {
+                    // Match full names, including spaces. A longer player name wins
+                    // over its shorter prefix, and duplicate exact names are ambiguous.
+                    var matches = server.GetPlayers()
+                        .Where(p =>
+                            arguments.StartsWith(p.Name, StringComparison.OrdinalIgnoreCase) &&
+                            (arguments.Length == p.Name.Length || arguments[p.Name.Length] == ' '))
+                        .OrderByDescending(p => p.Name.Length)
+                        .ToArray();
+
+                    if (matches.Length == 0)
+                    {
+                        output("[ADMIN] Player not found. Type 'players' for IDs and names.");
+                        break;
+                    }
+                    if (matches.Length > 1 && matches[0].Name.Length == matches[1].Name.Length)
+                    {
+                        output("[ADMIN] Ambiguous player name. Use the numeric ID from 'players'.");
+                        break;
+                    }
+
+                    id = matches[0].Id;
+                    reason = arguments[matches[0].Name.Length..].Trim();
+                }
+
+                if (reason.Length == 0) reason = "Removed by host";
+                if (reason.Length > 200 || reason.Any(char.IsControl))
+                {
+                    output("[ADMIN] Reason must have 1-200 printable characters.");
                     break;
                 }
 
@@ -81,14 +123,15 @@ public static class AdminConsole
                 break;
 
             case "say":
-                if (input.Length < 5)
+                var message = command[parts[0].Length..].Trim();
+                if (message.Length == 0)
                 {
                     output("Usage: say <message>");
                     break;
                 }
                 try
                 {
-                    await server.AnnounceAsync(input[4..].Trim(), token);
+                    await server.AnnounceAsync(message, token);
                     output("[ADMIN] Announcement delivered.");
                 }
                 catch (ArgumentException ex) { output($"[ADMIN] {ex.Message}"); }
@@ -99,7 +142,7 @@ public static class AdminConsole
                 return false;
 
             default:
-                output("[ADMIN] Unknown command. Type 'help'.");
+                output("[ADMIN] Unknown command. Type 'help' (or '/help').");
                 break;
         }
         return true;

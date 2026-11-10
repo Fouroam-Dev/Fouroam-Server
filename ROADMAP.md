@@ -25,8 +25,16 @@ The roadmap distinguishes implemented source code from CI and real-network valid
 - [x] Rate limiting for authentication failures.
 - [x] Expanded smoke tests for authorization and bans.
 - [x] Review v0.2 Windows/Linux GitHub Actions results (both build and smoke checks passed).
-- [ ] Repeat real-device testing with the new TLS client.
+- [x] Repeat real-device testing with the new TLS client (user validated connection and host kick on Windows).
 - [ ] Independent security review; improve password and identity management.
+
+## 2.1. Private-beta packaging
+
+- [x] Add automated Windows x64 self-contained EXE artifacts for server and test client.
+- [x] Support optional slash prefixes and unambiguous player names in local console commands.
+- [x] Add administration regression tests and documentation for EXE usage.
+- [ ] Confirm a successful Windows EXE artifact build on GitHub Actions.
+- [ ] Have a user test downloading and running the EXE without the SDK.
 
 ## 3. LAN and VPN testing
 

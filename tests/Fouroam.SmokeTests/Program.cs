@@ -94,6 +94,23 @@ internal static class Program
             Assert(server.GetPlayers().Length == 4, "Expected four connected clients.");
             Console.WriteLine("[PASS] Four authenticated TLS clients joined.");
 
+            var helpLines = new List<string>();
+            Assert(await AdminConsole.ExecuteAsync(server, "/help", helpLines.Add, timeout.Token),
+                "Slash help should keep the host console running.");
+            Assert(helpLines.Any(l => l.Contains("kick <id|name>")),
+                "Slash help should describe ID/name targets.");
+            var statusLines = new List<string>();
+            await AdminConsole.ExecuteAsync(server, "/status", statusLines.Add, timeout.Token);
+            Assert(statusLines.Any(l => l.Contains("4/4")),
+                "Slash status should report the current number of players.");
+            var playerLines = new List<string>();
+            await AdminConsole.ExecuteAsync(server, "/players", playerLines.Add, timeout.Token);
+            Assert(playerLines.Any(l => l.Contains("Player4")),
+                "Slash players should show the roster.");
+            await AdminConsole.ExecuteAsync(server, "/kick Nobody", _ => { }, timeout.Token);
+            Assert(server.GetPlayers().Length == 4, "Unknown name must not kick anyone.");
+            Console.WriteLine("[PASS] Host slash commands, status and name validation.");
+
             using (var fifth = await TestPeer.ConnectAsync(
                 server.Port, fingerprint, "Fifth", Password, identities[4], timeout.Token))
             {
@@ -143,7 +160,7 @@ internal static class Program
             }
 
             bool kicked = await AdminConsole.ExecuteAsync(
-                server, "kick 4 testing-kick", _ => { }, timeout.Token);
+                server, "/kick Player4 testing-kick", _ => { }, timeout.Token);
             Assert(kicked, "Admin console should continue after kick.");
             var kickedMessage = await peers[3].ReadUntilAsync(MessageTypes.Kicked, timeout.Token);
             Assert(kickedMessage.Text == "testing-kick", "Kick reason not delivered.");
@@ -157,14 +174,14 @@ internal static class Program
                 var welcome = await replacement.ReadUntilAsync(MessageTypes.Welcome, timeout.Token);
                 Assert(welcome.PlayerCount == 4, "Replacement should occupy available slot.");
 
-                await AdminConsole.ExecuteAsync(server, "say server-announcement", _ => { }, timeout.Token);
+                await AdminConsole.ExecuteAsync(server, "/say server-announcement", _ => { }, timeout.Token);
                 var announcement = await replacement.ReadUntilAsync(MessageTypes.Announcement, timeout.Token);
                 Assert(announcement.Text == "server-announcement", "Admin announcement missing.");
             }
             Console.WriteLine("[PASS] Announcement and replacement connection.");
 
             int bannedId = server.GetPlayers().Single(p => p.Name == "Player1").Id;
-            await AdminConsole.ExecuteAsync(server, $"ban {bannedId} banned-by-test", _ => { }, timeout.Token);
+            await AdminConsole.ExecuteAsync(server, $"/ban #{bannedId} banned-by-test", _ => { }, timeout.Token);
             var removed = await peers[0].ReadUntilAsync(MessageTypes.Kicked, timeout.Token);
             Assert(removed.Text == "banned-by-test", "Ban did not disconnect target.");
             peers[0].Dispose();
@@ -190,8 +207,8 @@ internal static class Program
             Assert(entries.Any(e => e.Contains(bannedFingerprint)),
                 "Ban listing must contain the persistent fingerprint.");
 
-            bool removedBan = server.Unban(bannedFingerprint[..16]);
-            Assert(removedBan && !new BanStore(banPath).Contains(bannedFingerprint),
+            await AdminConsole.ExecuteAsync(server, $"/unban {bannedFingerprint[..16]}", _ => { }, timeout.Token);
+            Assert(!new BanStore(banPath).Contains(bannedFingerprint),
                 "Ban removal must update the persisted file.");
 
             using (var allowed = await TestPeer.ConnectAsync(
@@ -216,6 +233,10 @@ internal static class Program
             for (int i = 0; i < 5; i++) limiter.RecordFailure("127.0.0.1");
             Assert(limiter.IsBlocked("127.0.0.1"), "Rate limiter should block after five failures.");
             Console.WriteLine("[PASS] Wrong password and login attempt limiter.");
+
+            Assert(!await AdminConsole.ExecuteAsync(server, "/stop", _ => { }, timeout.Token),
+                "Slash stop should signal the host console to exit.");
+            Console.WriteLine("[PASS] Slash stop recognized.");
         }
         finally
         {

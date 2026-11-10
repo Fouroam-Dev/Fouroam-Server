@@ -241,7 +241,7 @@ internal static class Program
 
     private static void PrintUsage()
     {
-        Console.WriteLine("Fouroam v0.2.0-dev CLI test client (not integrated with GTA V).");
+        Console.WriteLine("Fouroam v0.2.1-dev CLI test client (not integrated with GTA V).");
         Console.WriteLine("Usage: dotnet run --project src/Fouroam.Client.Test --");
         Console.WriteLine("  --host 127.0.0.1 --port 7777 --name Athilio");
         Console.WriteLine("  --fingerprint <TLS-SHA256-from-host> [--identity-file local-path]");

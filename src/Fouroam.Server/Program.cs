@@ -159,7 +159,7 @@ internal static class Program
 
     private static void PrintUsage()
     {
-        Console.WriteLine("Fouroam Server v0.2.0-dev (TLS-only standalone prototype)");
+        Console.WriteLine("Fouroam Server v0.2.1-dev (TLS-only standalone prototype)");
         Console.WriteLine("First time: dotnet run --project src/Fouroam.Server -- init");
         Console.WriteLine("Run: dotnet run --project src/Fouroam.Server -- [--bind IP] [--port PORT]");
         Console.WriteLine("Defaults: --bind 127.0.0.1 --port 7777");

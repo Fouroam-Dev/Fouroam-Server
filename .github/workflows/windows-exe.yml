@@ -1,0 +1,83 @@
+name: Windows EXE (development build)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Validate source and networking
+        shell: pwsh
+        run: |
+          dotnet restore Fouroam-Server.slnx
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed' }
+          dotnet run --project tests/Fouroam.SmokeTests --configuration Release
+          if ($LASTEXITCODE -ne 0) { throw 'Smoke tests failed' }
+
+      - name: Publish self-contained Windows x64 executables
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $serverDir = Join-Path $env:RUNNER_TEMP 'fouroam-server'
+          $clientDir = Join-Path $env:RUNNER_TEMP 'fouroam-client'
+
+          dotnet publish src/Fouroam.Server/Fouroam.Server.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -p:IncludeNativeLibrariesForSelfExtract=true -o $serverDir
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing Fouroam.Server.exe failed' }
+
+          dotnet publish src/Fouroam.Client.Test/Fouroam.Client.Test.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -p:IncludeNativeLibrariesForSelfExtract=true -o $clientDir
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing Fouroam.Client.Test.exe failed' }
+
+          $serverExe = Join-Path $serverDir 'Fouroam.Server.exe'
+          $clientExe = Join-Path $clientDir 'Fouroam.Client.Test.exe'
+          if (!(Test-Path $serverExe) -or !(Test-Path $clientExe)) { throw 'Missing published executable' }
+
+          & $serverExe --help
+          if ($LASTEXITCODE -ne 0) { throw 'Server executable startup check failed' }
+          & $clientExe --help
+          if ($LASTEXITCODE -ne 0) { throw 'Client executable startup check failed' }
+
+          foreach ($dir in @($serverDir, $clientDir)) {
+            Copy-Item LICENSE (Join-Path $dir 'LICENSE.txt')
+            Copy-Item docs/WINDOWS-EXE.md (Join-Path $dir 'LEIA-ME.md')
+            $private = Get-ChildItem $dir -Recurse -File | Where-Object {
+              $_.Name -in @('server.local.json', 'server-cert.pfx', 'bans.json', 'identity.key')
+            }
+            if ($private) { throw 'Refusing to publish private session data' }
+          }
+
+          $serverSum = (Get-FileHash $serverExe -Algorithm SHA256).Hash
+          $clientSum = (Get-FileHash $clientExe -Algorithm SHA256).Hash
+          "$serverSum  Fouroam.Server.exe" | Set-Content (Join-Path $serverDir 'SHA256SUMS.txt')
+          "$clientSum  Fouroam.Client.Test.exe" | Set-Content (Join-Path $clientDir 'SHA256SUMS.txt')
+          Write-Host "Server SHA256: $serverSum"
+          Write-Host "Client SHA256: $clientSum"
+
+      - name: Upload server EXE package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fouroam-Server-win-x64-dev
+          path: ${{ runner.temp }}/fouroam-server/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload test client EXE package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fouroam-Client-win-x64-dev
+          path: ${{ runner.temp }}/fouroam-client/
+          if-no-files-found: error
+          retention-days: 7

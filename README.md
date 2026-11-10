@@ -7,7 +7,7 @@
 Self-hosted networking prototype for [Fouroam-V](https://github.com/Fouroam-Dev/Fouroam-V).
 
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.2.0--dev-orange.svg)
+![Version](https://img.shields.io/badge/version-0.2.1--dev-orange.svg)
 ![.NET](https://img.shields.io/badge/.NET-10-purple.svg)
 [![.NET CI](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/dotnet.yml)
 
@@ -28,6 +28,14 @@ Self-hosted networking prototype for [Fouroam-V](https://github.com/Fouroam-Dev/
 - **Expanded automated tests** for authentication, administrator commands, permission separation, identity bans, four-player capacity and original chat/ping behavior.
 
 **Existing v0.1 functionality remains**, but the wire protocol is now **v2**, so older unencrypted clients cannot connect.
+
+## Downloadable Windows x64 development EXEs
+
+A [Windows EXE workflow](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/windows-exe.yml) builds **self-contained** server and test-client executables. You can download the two development ZIP artifacts from a successful GitHub Actions run and run the executables without installing the .NET SDK. Builds are not code-signed or stable production releases.
+
+Read the [Windows executable guide](docs/WINDOWS-EXE.md) and the [production readiness checklist](docs/PRODUCTION-READINESS.md). Download links appear in the **Artifacts** section of a successful workflow run and are available for seven days.
+
+The host console accepts an optional leading slash (such as `/kick 1`) and supports uniquely matched player names (`/kick Athilio`). Numeric IDs remain the safest way to address players.
 
 ## Security limitations
 

@@ -7,7 +7,7 @@
 Protótipo de servidor de rede auto-hospedado para o [Fouroam-V](https://github.com/Fouroam-Dev/Fouroam-V).
 
 [![MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-0.2.0--dev-orange.svg)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-0.2.1--dev-orange.svg)
 ![.NET](https://img.shields.io/badge/.NET-10-purple.svg)
 [![.NET CI](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/dotnet.yml)
 
@@ -28,6 +28,14 @@ Protótipo de servidor de rede auto-hospedado para o [Fouroam-V](https://github.
 - **Testes automatizados** para expulsão, permissões, senha, banimentos e funções antigas.
 
 O servidor mantém chat, ping, lista de jogadores e limite de quatro conexões, mas a mudança para **protocolo v2** impede a conexão dos clientes antigos sem TLS.
+
+## Executáveis Windows x64 para testes
+
+O [GitHub Actions](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/windows-exe.yml) compila **Fouroam.Server.exe** e **Fouroam.Client.Test.exe** auto-contidos. Baixe os ZIPs na seção **Artifacts** de uma execução concluída com sucesso. O .NET SDK não é necessário para rodar esses EXEs.
+
+São **builds de desenvolvimento sem assinatura digital**, não versões de produção. Leia o [guia dos executáveis](docs/WINDOWS-EXE.md) e o [checklist antes da produção](docs/PRODUCTION-READINESS.md).
+
+Os comandos do console administrativo também podem começar com `/`, por exemplo `/kick 1`, ou usar o nome do jogador quando não houver ambiguidade, por exemplo `/kick Athilio`.
 
 ## Como configurar
 
