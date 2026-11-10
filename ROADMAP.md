@@ -24,7 +24,7 @@ The roadmap distinguishes implemented source code from CI and real-network valid
 - [x] Ban/unban using persistent per-installation identity hashes.
 - [x] Rate limiting for authentication failures.
 - [x] Expanded smoke tests for authorization and bans.
-- [ ] Review v0.2 Windows/Linux GitHub Actions results.
+- [x] Review v0.2 Windows/Linux GitHub Actions results (both build and smoke checks passed).
 - [ ] Repeat real-device testing with the new TLS client.
 - [ ] Independent security review; improve password and identity management.
 
