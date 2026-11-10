@@ -23,6 +23,7 @@ Contact **athiliorecovery@gmail.com** with subject "Fouroam Server - Security Re
 - Client tokens can be regenerated, bypassing bans. No account verification, anti-cheat or identity attestation is provided.
 - The locally stored PFX contains the server private key. Protect it and the \`.fouroam/\` directory with OS access controls, and **do not commit, distribute or expose them**.
 - All players share one session password. Leaked passwords should be treated as compromised.
+- The minimum password length is **4 characters** for private-session convenience, but a 4-character password is easy to guess and is **not recommended**. Prefer a long, unique password and restrict network access to trusted LAN/VPN clients.
 - Pinning protects against unrecognized TLS certificates **only when the fingerprint was obtained securely**. Verify an unexpected change with the operator.
 - A basic failed-login limiter is not protection against distributed denial-of-service attacks or hostile internet traffic.
 - Do not port-forward. Restrict access to trusted LAN/VPN participants using host firewall rules.

@@ -106,8 +106,10 @@ internal static class Program
             string name = Console.ReadLine() is { Length: > 0 } response
                 ? response : "Fouroam Private Session";
 
-            Console.Write("Password (12-128 characters; hidden): ");
+            Console.Write("Password (4-128 characters; hidden): ");
             string password = ReadSecret();
+            if (password.Length < 12)
+                Console.WriteLine("[SECURITY] Short password: suitable only for a trusted private LAN/VPN. A longer password is strongly recommended.");
             Console.Write("Confirm password (hidden): ");
             string confirmation = ReadSecret();
             if (password != confirmation)

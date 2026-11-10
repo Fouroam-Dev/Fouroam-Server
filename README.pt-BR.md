@@ -33,12 +33,14 @@ O servidor mantém chat, ping, lista de jogadores e limite de quatro conexões, 
 
 Instale o [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) e abra um terminal na pasta raiz do repositório.
 
-**1. Inicialize uma vez**, criando o nome da sessão e a senha de 12–128 caracteres:
+**1. Inicialize uma vez**, criando o nome da sessão e a senha de 4–128 caracteres:
 
 ~~~powershell
 dotnet restore Fouroam-Server.slnx
 dotnet run --project src/Fouroam.Server -- init
 ~~~
+
+**Aviso de segurança:** senhas de 4 caracteres são fracas. Prefira uma senha longa e única; use o servidor somente em LAN/VPN privada e não abra a porta na internet.
 
 Guarde o **fingerprint SHA-256** exibido no terminal. Ele permite que os clientes confirmem que estão conectando ao servidor correto.
 

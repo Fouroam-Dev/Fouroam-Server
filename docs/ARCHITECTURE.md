@@ -17,7 +17,7 @@ flowchart LR
 
 ## Local configuration and TLS identity
 
-The host runs \`init\` once to configure a session name and password. The password is converted to a 210,000-iteration PBKDF2-SHA256 verifier with a random 16-byte salt and saved to \`.fouroam/server.local.json\`.
+The host runs \`init\` once to configure a session name and password (4–128 characters; short passwords are insecure and strongly discouraged). The password is converted to a 210,000-iteration PBKDF2-SHA256 verifier with a random 16-byte salt and saved to \`.fouroam/server.local.json\`.
 
 A self-signed TLS certificate and its private key are stored in \`.fouroam/server-cert.pfx\`. The client **requires** the certificate's SHA-256 fingerprint as an argument and rejects any other certificate. Operators must distribute and verify the fingerprint out of band.
 

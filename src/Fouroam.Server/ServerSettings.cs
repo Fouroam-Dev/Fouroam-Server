@@ -16,8 +16,8 @@ public sealed record ServerSettings
         sessionName = sessionName.Trim();
         if (sessionName.Length is < 2 or > 48 || sessionName.Any(char.IsControl))
             throw new ArgumentException("Session name must be 2-48 printable characters.");
-        if (password.Length is < 12 or > 128)
-            throw new ArgumentException("Session password must be 12-128 characters.");
+        if (password.Length is < 4 or > 128)
+            throw new ArgumentException("Session password must be 4-128 characters.");
 
         byte[] salt = RandomNumberGenerator.GetBytes(16);
         byte[] derived = Rfc2898DeriveBytes.Pbkdf2(
@@ -32,7 +32,7 @@ public sealed record ServerSettings
 
     public bool Verify(string? password)
     {
-        if (password is null || password.Length > 128) return false;
+        if (password is null || password.Length is < 4 or > 128) return false;
         byte[] salt = Convert.FromBase64String(PasswordSalt);
         byte[] expected = Convert.FromBase64String(PasswordHash);
         byte[] actual = Rfc2898DeriveBytes.Pbkdf2(

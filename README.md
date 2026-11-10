@@ -54,7 +54,7 @@ dotnet restore Fouroam-Server.slnx
 dotnet run --project src/Fouroam.Server -- init
 ~~~
 
-Enter a session name and a password of **12–128 characters**. The password is entered without echoing it. Setup creates the private \`.fouroam/\` directory and displays the **TLS certificate fingerprint**. The password cannot be recovered from the verifier: if it is lost, you must set up a new configuration.
+Enter a session name and a password of **4–128 characters**. The password is entered without echoing it. Setup creates the private \`.fouroam/\` directory and displays the **TLS certificate fingerprint**. **Security warning:** a 4-character password is weak. Use a long, unique password whenever possible, keep the server on a trusted LAN/VPN and never port-forward it. The password cannot be recovered from the verifier: if it is lost, you must set up a new configuration.
 
 **Never commit or share the local \`.fouroam/\` directory.** Its contents include the server private key and ban database.
 

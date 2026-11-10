@@ -39,6 +39,19 @@ internal static class Program
     private static async Task RunAsync(string dataDir)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(50));
+        // The minimum of 4 characters is intentional for small private sessions.
+        var shortPasswordSettings = ServerSettings.Create("Short Pass", "abcd");
+        Assert(shortPasswordSettings.Verify("abcd"), "Exactly four characters must be accepted.");
+        Assert(!shortPasswordSettings.Verify("abc"), "Short password verifier must reject a wrong password.");
+        bool tooShortRejected = false;
+        try { ServerSettings.Create("Short Pass", "abc"); }
+        catch (ArgumentException) { tooShortRejected = true; }
+        Assert(tooShortRejected, "Three-character passwords must be rejected.");
+        bool tooLongRejected = false;
+        try { ServerSettings.Create("Short Pass", new string('x', 129)); }
+        catch (ArgumentException) { tooLongRejected = true; }
+        Assert(tooLongRejected, "129-character passwords must be rejected.");
+        Console.WriteLine("[PASS] Password length boundaries: 3 rejected, 4 accepted, 129 rejected.");
         var settings = ServerSettings.Create("Test Session", Password);
         settings.Save(dataDir);
         var loaded = ServerSettings.Load(dataDir);
