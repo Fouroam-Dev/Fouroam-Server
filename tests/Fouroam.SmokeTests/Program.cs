@@ -49,6 +49,7 @@ internal static class Program
         Console.WriteLine("[PASS] Private PBKDF2 server configuration.");
 
         using var certificate = LocalCertificate.LoadOrCreate(dataDir);
+        Assert(certificate.HasPrivateKey, "Certificate must have its private key.");
         string fingerprint = LocalCertificate.Fingerprint(certificate);
         Assert(TlsFingerprint.Matches(certificate, fingerprint), "Pinned certificate should match.");
         Assert(!TlsFingerprint.Matches(certificate, new string('0', 64)),

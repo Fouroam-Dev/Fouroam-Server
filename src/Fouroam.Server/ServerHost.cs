@@ -112,7 +112,7 @@ public sealed class ServerHost : IAsyncDisposable
             {
                 lock (_gate) _handlers.Remove(completed);
                 if (completed.IsFaulted)
-                    _log("[SECURITY] Connection handler terminated unexpectedly.");
+                    _log($"[SECURITY] Connection handler terminated: {completed.Exception?.GetBaseException().GetType().Name}: {completed.Exception?.GetBaseException().Message}");
             }, TaskScheduler.Default);
         }
     }
@@ -306,6 +306,8 @@ public sealed class ServerHost : IAsyncDisposable
             AuthenticationException)
         {
             // Corrupt frame, TLS handshake failure, network disconnect or shutdown.
+            if (!cancellationToken.IsCancellationRequested)
+                _log($"[NETWORK] Peer disconnected ({ex.GetType().Name}: {ex.Message}).");
         }
         finally
         {

@@ -33,8 +33,19 @@ public static class LocalCertificate
                 File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
         }
 
-        return X509CertificateLoader.LoadPkcs12FromFile(
-            path, password: null, X509KeyStorageFlags.EphemeralKeySet);
+        // Windows Schannel needs a provider-backed private key; ephemeral PFX keys may
+        // be unavailable to its TLS credential acquisition. Other platforms can
+        // load the key ephemerally. The PFX remains private local server state.
+        var flags = OperatingSystem.IsWindows()
+            ? X509KeyStorageFlags.UserKeySet | X509KeyStorageFlags.PersistKeySet
+            : X509KeyStorageFlags.EphemeralKeySet;
+        var loaded = X509CertificateLoader.LoadPkcs12FromFile(path, null, flags);
+        if (!loaded.HasPrivateKey)
+        {
+            loaded.Dispose();
+            throw new CryptographicException("TLS certificate does not have a private key.");
+        }
+        return loaded;
     }
 
     public static string Fingerprint(X509Certificate certificate) =>
