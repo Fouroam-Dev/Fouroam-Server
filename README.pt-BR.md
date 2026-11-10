@@ -6,89 +6,110 @@
 
 Protótipo de servidor de rede auto-hospedado para o [Fouroam-V](https://github.com/Fouroam-Dev/Fouroam-V).
 
-[![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-0.1.0--dev-orange.svg)
+[![MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-0.2.0--dev-orange.svg)
 ![.NET](https://img.shields.io/badge/.NET-10-purple.svg)
 [![.NET CI](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/dotnet.yml)
 
-[English](README.md) · [Português](README.pt-BR.md) · [Roadmap](ROADMAP.md) · [Contribuições](CONTRIBUTING.md)
+[English](README.md) · [Português](README.pt-BR.md) · [Roadmap](ROADMAP.md)
 
 </div>
 
 > [!IMPORTANT]
-> **Protótipo independente de rede.** O código possui um servidor TCP, cliente de teste e testes automatizados. **Não há integração com GTA V, sincronização do mundo ou campanha cooperativa.** Ainda não existe instalador ou release para baixar.
+> **Protótipo independente de rede.** Ainda não conecta ao GTA V nem oferece multiplayer no jogo ou missões oficiais. Não há instalador/release publicada.
 
-## O que já foi implementado no código
+## Novidades da v0.2.0-dev
 
-- Servidor TCP em **C# / .NET 10**, hospedado pelo próprio usuário.
-- Limite de **quatro jogadores simultâneos**.
-- Identificação por nome, handshake com versão de protocolo e IDs únicos.
-- Avisos de entrada/saída, lista de jogadores, chat e ping.
-- Mensagens JSON com limite de 4096 bytes e limitação básica de frequência de comandos.
-- Cliente de console para simular jogadores sem abrir o GTA V.
-- Testes de capacidade, desconexão, reconexão e comunicação.
+- **TLS 1.2/1.3 obrigatório** em todas as conexões, com verificação do fingerprint SHA-256 do certificado do host. Não existe conexão sem criptografia.
+- **Configuração privada**, com nome da sessão e senha armazenada em forma de hash PBKDF2-SHA256 com salt.
+- **Console administrativo do host**: \`help\`, \`status\`, \`players\`, \`kick\`, \`ban\`, \`bans\`, \`unban\`, \`say\` e \`stop\`.
+- **Banimentos persistentes por identidade de instalação**: a identidade do cliente é gerada aleatoriamente e salva localmente; o servidor armazena apenas seu fingerprint.
+- **Proteção contra tentativas repetidas**: cinco falhas de autenticação em 60 segundos por endereço remoto.
+- **Testes automatizados** para expulsão, permissões, senha, banimentos e funções antigas.
 
-**Atenção à segurança:** esta primeira versão **não tem senha, autenticação ou criptografia**. Não abra portas na internet nem faça port forwarding. Use somente uma LAN ou VPN privada confiável e restrinja o acesso pelo firewall. Não transmita informações sensíveis.
+O servidor mantém chat, ping, lista de jogadores e limite de quatro conexões, mas a mudança para **protocolo v2** impede a conexão dos clientes antigos sem TLS.
 
-## Requisitos
+## Como configurar
 
-Instale o [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) no Windows. O jogo GTA V **não é necessário para testar a rede**.
+Instale o [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) e abra um terminal na pasta raiz do repositório.
 
-## Iniciar servidor (PowerShell)
-
-No diretório raiz do projeto:
+**1. Inicialize uma vez**, criando o nome da sessão e a senha de 12–128 caracteres:
 
 ~~~powershell
 dotnet restore Fouroam-Server.slnx
+dotnet run --project src/Fouroam.Server -- init
+~~~
+
+Guarde o **fingerprint SHA-256** exibido no terminal. Ele permite que os clientes confirmem que estão conectando ao servidor correto.
+
+A pasta \`.fouroam/\` guarda o hash da senha, a chave privada TLS e os banimentos. **Não compartilhe nem envie essa pasta para o GitHub.** Proteja seu acesso no Windows.
+
+**2. Inicie o servidor local:**
+
+~~~powershell
 dotnet run --project src/Fouroam.Server -- --bind 127.0.0.1 --port 7777
 ~~~
 
-Para aceitar outros computadores em uma **LAN/VPN privada de confiança**, use:
+Para conectar outros PCs em LAN ou Radmin VPN privada e confiável, execute com \`--bind 0.0.0.0\`, restringindo a porta TCP 7777 no Firewall do Windows. **Não faça port forwarding ou exposição pública desse protótipo.**
+
+**3. Conecte o cliente**, em outro terminal (substitua o fingerprint pelo exibido no servidor):
 
 ~~~powershell
-dotnet run --project src/Fouroam.Server -- --bind 0.0.0.0 --port 7777
+dotnet run --project src/Fouroam.Client.Test -- --host 127.0.0.1 --port 7777 --name Athilio --fingerprint COLE_AQUI_O_FINGERPRINT_SHA256
 ~~~
 
-A porta é **TCP 7777**. Configure o firewall para permitir somente os participantes da rede privada. Quem usa Radmin VPN deve conectar pelo IPv4 do Radmin do computador host, não pelo IP público. **Não redirecione a porta no roteador para a internet.**
+O cliente pedirá a senha sem exibi-la na tela. **Não escreva a senha na linha de comando.**
 
-## Conectar um cliente de teste
-
-Em outro terminal:
+Para testar com quatro clientes no mesmo PC, cada um deve usar um arquivo de identidade diferente, por exemplo:
 
 ~~~powershell
-dotnet run --project src/Fouroam.Client.Test -- --host 127.0.0.1 --port 7777 --name Athilio
+dotnet run --project src/Fouroam.Client.Test -- --host 127.0.0.1 --port 7777 --name Michael --fingerprint SEU_FINGERPRINT --identity-file .fouroam-client/michael.key
 ~~~
 
-Para testar com um amigo em outro PC, substitua o IP pelo endereço privado do host na LAN ou na VPN.
+Repita com \`franklin.key\` e \`trevor.key\`. O primeiro cliente pode manter a identidade padrão. O cliente salva sua identidade padrão na pasta LocalAppData/Fouroam do Windows.
 
-| Comando | Função |
+## Comandos administrativos
+
+No **terminal do servidor**, não no terminal dos clientes:
+
+| Comando | Efeito |
 | --- | --- |
-| /players | Exibir lista de jogadores |
-| /ping | Verificar latência |
-| /quit | Desconectar |
-| Outro texto | Enviar mensagem de teste |
+| \`help\` | Mostra os comandos |
+| \`players\` | Lista nome, ID e início do fingerprint |
+| \`status\` | Mostra informações da sessão |
+| \`kick 3 motivo\` | Expulsa a conexão de ID 3 |
+| \`ban 3 motivo\` | Bloqueia a identidade e expulsa o jogador |
+| \`bans\` | Lista fingerprints banidos |
+| \`unban ABCDEF12\` | Remove banimento por prefixo único, com pelo menos 8 caracteres |
+| \`say mensagem\` | Envia anúncio a todos |
+| \`stop\` | Encerra o servidor corretamente |
 
-Use **Ctrl+C** para encerrar o servidor.
+IDs como \`#3\` mudam a cada reconexão. O banimento usa o fingerprint da identidade persistida pelo cliente, **não um ID temporário nem um IP**.
 
-## Executar testes
+**Limitação:** sem contas verificadas, a pessoa pode gerar outro arquivo de identidade para contornar o banimento. Esse mecanismo não é um anti-cheat.
+
+## Segurança
+
+- A senha trafega somente por um canal TLS autenticado pelo fingerprint.
+- O certificado é autoassinado e a chave privada fica no PC do host. A proteção do arquivo é responsabilidade do sistema operacional e do usuário.
+- O fingerprint deve ser compartilhado e confirmado por um canal confiável, diferente da conexão que está sendo estabelecida.
+- Restringir conexões via LAN/VPN e firewall continua sendo necessário. **Não é um servidor endurecido para a internet pública.**
+
+## Testes
 
 ~~~powershell
 dotnet build Fouroam-Server.slnx --configuration Release
 dotnet run --project tests/Fouroam.SmokeTests --configuration Release
 ~~~
 
-Os testes iniciam um servidor temporário no próprio computador, conectam quatro clientes, verificam a recusa do quinto, comunicação e liberação de vaga. O GitHub Actions também compila e executa esses testes em Windows e Linux.
+Acompanhe o [GitHub Actions](https://github.com/Fouroam-Dev/Fouroam-Server/actions) para os resultados dos testes Windows e Linux.
 
-## Próximas etapas
-
-Primeiro vamos validar a comunicação e reforçar a segurança. A sincronização em tempo real será estudada depois. **Não há funcionalidade de GTA V nem garantia de suporte a missões oficiais.** Qualquer integração com o jogo depende de avaliação técnica e das permissões aplicáveis.
-
-Veja o [ROADMAP](ROADMAP.md), a [arquitetura](docs/ARCHITECTURE.md) e como [contribuir](CONTRIBUTING.md).
+Mais detalhes: [Roadmap](ROADMAP.md), [Arquitetura](docs/ARCHITECTURE.md) e [Contribuições](CONTRIBUTING.md).
 
 ## Aviso legal
 
-Projeto independente e não oficial, sem afiliação com Rockstar Games, Take-Two Interactive, Valve ou Epic Games. GTA V e seus conteúdos pertencem aos titulares correspondentes. A licença MIT cobre somente o código e a documentação originais do projeto.
+Projeto independente e não oficial, sem afiliação com Rockstar Games, Take-Two Interactive, Valve ou Epic Games. GTA V e suas propriedades pertencem aos titulares correspondentes. A licença MIT cobre somente nosso código e documentação originais. Integrações com o jogo e missões oficiais dependem de análise de viabilidade e permissões.
 
 ## Licença
 
-[MIT](LICENSE). Copyright (c) 2026 Fouroam-Dev.
+[MIT](LICENSE), copyright (c) 2026 Fouroam-Dev.

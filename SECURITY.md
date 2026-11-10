@@ -2,31 +2,30 @@
 
 ## Supported versions
 
-Fouroam Server is currently in **planning / pre-alpha**. No executable release is available and no runtime version is supported yet.
+Fouroam Server v0.2.0-dev is a **networking prototype** without a public release. No version is considered production-hardened or suitable for exposure on an unrestricted public network.
 
-Once the project publishes working code, this section will state which versions receive security updates.
+## Reporting vulnerabilities
 
-## Reporting a vulnerability
+Do not publish exploit instructions, secrets, identity files, IP addresses or private configuration in an issue.
 
-**Do not open public issues with exploit instructions, secret values, or private network information.**
+Contact **athiliorecovery@gmail.com** with subject "Fouroam Server - Security Report". Include impact, component, reproduction details and sanitized logs. The maintainers will review privately; no response-time SLA is promised.
 
-Email **athiliorecovery@gmail.com** with the subject `Fouroam Server — Security Report`. If private vulnerability reporting becomes available on GitHub, that channel may also be used.
+## Current security design
 
-Include:
+- TLS 1.2/1.3, with a self-signed host certificate **explicitly pinned** by SHA-256 fingerprint on the client.
+- Local salted PBKDF2-SHA256 verifier for the shared session password.
+- Bounded JSON messages, handshake limit, connection limit and login throttling.
+- No remote admin commands. \`kick\`, \`ban\`, \`unban\`, \`stop\` and related commands are available only through the host terminal.
+- Persistent bans use SHA-256 fingerprints of random client installation tokens, not temporary IDs.
 
-- A summary of the vulnerability and its possible impact.
-- The affected version, component or commit, if known.
-- Minimal steps to reproduce.
-- Logs or screenshots with credentials, IP addresses and personal details removed.
+## Known limitations and operator responsibilities
 
-The maintainers will assess reports privately. No response-time guarantee is offered while the project is in planning.
+- Client tokens can be regenerated, bypassing bans. No account verification, anti-cheat or identity attestation is provided.
+- The locally stored PFX contains the server private key. Protect it and the \`.fouroam/\` directory with OS access controls, and **do not commit, distribute or expose them**.
+- All players share one session password. Leaked passwords should be treated as compromised.
+- Pinning protects against unrecognized TLS certificates **only when the fingerprint was obtained securely**. Verify an unexpected change with the operator.
+- A basic failed-login limiter is not protection against distributed denial-of-service attacks or hostile internet traffic.
+- Do not port-forward. Restrict access to trusted LAN/VPN participants using host firewall rules.
+- The project still needs independent security review and network hardening before any public deployment.
 
-## Security priorities for development
-
-- Validate incoming packets and message lengths.
-- Prevent unauthorized session joins and enforce the four-player limit.
-- Guard against malformed input, denial of service and unsafe deserialization.
-- Avoid leaking user data in logs or diagnostics.
-- Verify dependency and release integrity.
-
-This policy covers **original Fouroam Server software** only. It does not authorize testing third-party game platforms, services, VPN infrastructure or other players.
+The policy does not authorize attacking Rockstar, VPN providers, game networks or other players.

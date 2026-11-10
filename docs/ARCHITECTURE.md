@@ -1,70 +1,72 @@
-# Fouroam Server — Standalone Network Prototype
+# Fouroam Server Architecture — v0.2.0-dev
 
-## Current implementation
-
-The first milestone is a **real TCP session server**, completely independent from GTA V.
-
-~~~mermaid
-flowchart TD
-    C1[CLI Client A] --> N[Trusted LAN / VPN]
-    C2[CLI Client B] --> N
-    C3[CLI Client C] --> N
-    C4[CLI Client D] --> N
-    N --> S[Fouroam.Server TCP 7777]
-    S --> M[Session manager - max 4 players]
-    S --> P[Versioned JSON protocol]
-~~~
-
-The host can run the server process on the same machine as a client. Other participants connect using the host's private LAN/VPN IPv4 address. No cloud account, matchmaking or VPS is required.
+> This is a standalone TLS networking prototype. **No GTA V integration exists.**
 
 ## Components
 
-| Project | Responsibility |
-| --- | --- |
-| \`Fouroam.Server\` | TCP listener, connection management, unique IDs, capacity, command validation and notifications |
-| \`Fouroam.Client.Test\` | CLI client for handshake, roster, chat, ping and disconnect tests |
-| \`Fouroam.Shared\` | JSON-lines messages, protocol version and bounded framing |
-| \`Fouroam.SmokeTests\` | Automated integration checks with several localhost clients |
-
-## Protocol v1
-
-Each TCP line is a single UTF-8 JSON object, up to **4096 bytes** before the newline delimiter.
-
-Example handshake request:
-
-~~~json
-{"type":"hello","protocolVersion":1,"name":"Athilio"}
+~~~mermaid
+flowchart LR
+    A[Test client] -->|TLS 1.2/1.3, pinned cert| H[Server Host]
+    H --> P[Protocol v2]
+    P --> S[Four-player session]
+    P --> F[Authentication limiter]
+    P --> B[Persistent identity bans]
+    C[Local operator terminal] -->|Host-only commands| H
+    L[Private .fouroam directory] --> H
 ~~~
 
-Successful response:
+## Local configuration and TLS identity
+
+The host runs \`init\` once to configure a session name and password. The password is converted to a 210,000-iteration PBKDF2-SHA256 verifier with a random 16-byte salt and saved to \`.fouroam/server.local.json\`.
+
+A self-signed TLS certificate and its private key are stored in \`.fouroam/server-cert.pfx\`. The client **requires** the certificate's SHA-256 fingerprint as an argument and rejects any other certificate. Operators must distribute and verify the fingerprint out of band.
+
+Clients generate a random 256-bit installation identity token, saved under LocalAppData/Fouroam or an operator-provided \`--identity-file\`. This bearer token is submitted only over the pinned TLS channel; the host hashes it for identity bans, without storing the token plaintext.
+
+**Ban limitation:** rotating the client identity file creates a new identity and bypasses an existing ban. This is not authenticated account identification.
+
+## Protocol v2
+
+Wire format is newline-delimited UTF-8 JSON, up to 4096 bytes per message.
+
+After **successful TLS negotiation**, the client sends:
 
 ~~~json
-{"type":"welcome","protocolVersion":1,"playerId":1,"playerCount":1,"maxPlayers":4,"players":[{"id":1,"name":"Athilio"}]}
+{
+  "type": "hello",
+  "protocolVersion": 2,
+  "name": "Athilio",
+  "password": "<entered privately on client>",
+  "identityToken": "<64 hex characters, local client secret>"
+}
 ~~~
 
-Messages and valid directions:
+The host validates the version, printable name, installation token, shared password, ban list, capacity and duplicate active identities.
 
-| Type | Direction | Purpose |
-| --- | --- | --- |
-| \`hello\` | Client → Server | Join with protocol version and name |
-| \`welcome\` | Server → Client | Confirm ID and roster |
-| \`server_full\` | Server → Client | Reject a fifth player |
-| \`player_joined\` / \`player_left\` | Server → Clients | Session events |
-| \`players_request\` / \`players\` | Client → Server / Server → Client | Query roster |
-| \`ping\` / \`pong\` | Client → Server / Server → Client | Diagnostic echo |
-| \`chat\` | Both | Up to 280 printable characters |
-| \`error\` | Server → Client | Explain invalid requests |
+On success the server responds with \`welcome\` including the temporary player ID, session name and roster. Other commands include \`players_request\`, \`players\`, \`player_joined\`, \`player_left\`, \`chat\`, \`ping\`, \`pong\`, \`announcement\`, \`kicked\`, \`error\`, and \`server_full\`.
 
-The server chooses and authenticates the **player ID within the session**; clients cannot select their own IDs. Names are 2–24 characters using letters, digits, spaces, \`_\` and \`-\`. A rate limit of 20 commands in 5 seconds applies per connected player. Up to eight incomplete handshakes can be active, with a 10-second timeout.
+**Never log, quote or publish the client's password or identity token.**
 
-## Networking and security boundaries
+## Administration and authorization
 
-- Default binding is **127.0.0.1**; use \`--bind 0.0.0.0\` explicitly for other machines.
-- Only use a trusted LAN or private VPN; this proof of concept has **no transport encryption, authentication, or server join password**.
-- Do not forward the port on your public router or expose it on a public-facing VPS.
-- Firewall rules must restrict traffic to authorized private peers.
-- Network payloads are validated and bounded. This is **not a security audit** or production-ready protocol.
+The host reads local terminal commands. No remote wire command can request kick, ban, unban, announcement or stop. The server chooses player IDs; clients cannot impersonate a server-assigned ID.
 
-## Future work
+Bans are saved atomically in \`.fouroam/bans.json\` as SHA-256 token fingerprints. Administrative unban uses a uniquely matching prefix of at least eight hexadecimal digits.
 
-Authentication, encrypted transport, resilience under network loss, real-time state replication and authorized game integrations are not yet implemented. No official story mission or platform achievement support is guaranteed.
+## Transport hardening currently implemented
+
+- TLS 1.2/1.3 with explicit certificate pin.
+- Protocol handshake timeout of 10 seconds and a maximum of eight incomplete handshakes.
+- Five failed credentials per remote address within a rolling 60-second window.
+- Maximum of four active players.
+- 4096-byte frame limit and 20 commands per five seconds per player.
+- Printable 2–24 character player names and 1–280 character chat messages.
+
+## Open security tasks
+
+- Stronger account/identity model and safer key storage.
+- Tests under hostile or lossy network traffic.
+- Audited operational guidance for internet-exposed hosts (currently **not supported**).
+- Independent review before production use.
+
+The next major feature, real-time state synchronization, remains research only. GTA V integration and official story progress are not supported.

@@ -12,6 +12,8 @@ public static class MessageTypes
     public const string Chat = "chat";
     public const string Ping = "ping";
     public const string Pong = "pong";
+    public const string Announcement = "announcement";
+    public const string Kicked = "kicked";
     public const string Error = "error";
 }
 
@@ -24,6 +26,9 @@ public sealed record WireMessage
     public int? PlayerId { get; init; }
     public string? Name { get; init; }
     public string? Text { get; init; }
+    public string? SessionName { get; init; }
+    public string? Password { get; init; }
+    public string? IdentityToken { get; init; }
     public int? PlayerCount { get; init; }
     public int? MaxPlayers { get; init; }
     public IReadOnlyList<PlayerInfo>? Players { get; init; }

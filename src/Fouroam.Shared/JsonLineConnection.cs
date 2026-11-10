@@ -2,13 +2,10 @@ using System.Text.Json;
 
 namespace Fouroam.Shared;
 
-/// <summary>
-/// Small, bounded, newline-delimited JSON protocol for the standalone prototype.
-/// Each connection has one reader and serialized concurrent writers.
-/// </summary>
+/// <summary>Bounded newline-delimited JSON over an already secured TLS stream.</summary>
 public sealed class JsonLineConnection : IDisposable
 {
-    public const int ProtocolVersion = 1;
+    public const int ProtocolVersion = 2;
     public const int MaxMessageBytes = 4096;
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -20,10 +17,8 @@ public sealed class JsonLineConnection : IDisposable
     private int _readPosition;
     private int _readLength;
 
-    public JsonLineConnection(Stream stream)
-    {
+    public JsonLineConnection(Stream stream) =>
         _stream = stream ?? throw new ArgumentNullException(nameof(stream));
-    }
 
     public async Task<WireMessage?> ReceiveAsync(CancellationToken cancellationToken = default)
     {
@@ -38,16 +33,13 @@ public sealed class JsonLineConnection : IDisposable
 
                 if (_readLength == 0)
                 {
-                    if (line.Length == 0)
-                        return null;
-
+                    if (line.Length == 0) return null;
                     throw new InvalidDataException("Connection closed in the middle of a message.");
                 }
             }
 
             var newlineAt = Array.IndexOf(
                 _readBuffer, (byte)'\n', _readPosition, _readLength - _readPosition);
-
             var count = newlineAt >= 0
                 ? newlineAt - _readPosition
                 : _readLength - _readPosition;
@@ -57,11 +49,9 @@ public sealed class JsonLineConnection : IDisposable
 
             line.Write(_readBuffer, _readPosition, count);
             _readPosition += count;
+            if (newlineAt < 0) continue;
 
-            if (newlineAt < 0)
-                continue;
-
-            _readPosition++; // Consume delimiter.
+            _readPosition++;
             if (line.Length == 0)
                 throw new InvalidDataException("Empty protocol message.");
 
@@ -70,7 +60,6 @@ public sealed class JsonLineConnection : IDisposable
                 var message = JsonSerializer.Deserialize<WireMessage>(line.ToArray(), JsonOptions);
                 if (message is null || string.IsNullOrWhiteSpace(message.Type))
                     throw new InvalidDataException("Protocol message has no type.");
-
                 return message;
             }
             catch (JsonException ex)

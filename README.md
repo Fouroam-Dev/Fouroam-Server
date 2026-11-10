@@ -4,12 +4,11 @@
 
 **Your session. Your machine. Your rules.**
 
-A self-hosted networking prototype for [Fouroam-V](https://github.com/Fouroam-Dev/Fouroam-V), an independent project exploring small private cooperative sessions.
+Self-hosted networking prototype for [Fouroam-V](https://github.com/Fouroam-Dev/Fouroam-V).
 
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Development](https://img.shields.io/badge/stage-0.1.0--dev-orange.svg)
+[![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Version](https://img.shields.io/badge/version-0.2.0--dev-orange.svg)
 ![.NET](https://img.shields.io/badge/.NET-10-purple.svg)
-![GTA V](https://img.shields.io/badge/GTA%20V-integration%20not%20implemented-lightgrey.svg)
 [![.NET CI](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/dotnet.yml)
 
 [English](README.md) · [Português](README.pt-BR.md) · [Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md)
@@ -17,99 +16,132 @@ A self-hosted networking prototype for [Fouroam-V](https://github.com/Fouroam-De
 </div>
 
 > [!IMPORTANT]
-> **Standalone networking proof of concept, not a GTA V multiplayer mod.** The source now contains a TCP server, a CLI test client and a smoke-test harness. It does **not** connect to GTA V, sync its world or enable story co-op. There is no downloadable installer or release yet. Compilation and test results are tracked by GitHub Actions.
+> **Standalone network prototype, not a GTA V multiplayer mod.** It does not connect to GTA V, synchronize the game, or support official story missions. There is no published installer or downloadable release. Source builds are validated by GitHub Actions.
 
-## What works in the current source
+## What's new in v0.2.0-dev
 
-- A self-hosted TCP server using **C# / .NET 10**.
-- Up to **four concurrent players**, enforced server-side.
-- Player identification, bounded name validation and a versioned handshake.
-- Join/leave notifications, a player list, chat and ping/pong for diagnostics.
-- Framed JSON messages with a 4096-byte size limit and a basic command rate limit.
-- A standalone CLI client, plus automated smoke tests for capacity, reconnect, ping and chat.
-- Bind to loopback by default, or explicitly bind to a LAN/VPN interface.
+- **TLS 1.2/1.3** for every connection. Clients must verify the host's SHA-256 certificate fingerprint, supplied through a trusted channel. There is **no plaintext fallback**.
+- **Private session configuration:** a local, ignored file stores a session name and **salted PBKDF2-SHA256 password verifier**, not the password itself.
+- **Host console administration:** \`help\`, \`status\`, \`players\`, \`kick\`, \`ban\`, \`bans\`, \`unban\`, \`say\`, \`stop\`.
+- **Identity-based bans:** client identities are generated randomly, retained locally and hashed on the server. Ban lists survive server restarts.
+- **Authentication throttling:** up to five failed attempts per remote address over a sliding 60-second window; bounded handshakes and messages.
+- **Expanded automated tests** for authentication, administrator commands, permission separation, identity bans, four-player capacity and original chat/ping behavior.
 
-**Security limitations:** this development prototype has **no authentication, session passwords or encryption**. Never expose it directly to the public internet, forward its port, or connect over untrusted networks. Restrict access with your firewall and a trusted LAN or private VPN only. Do not use it for sensitive data.
+**Existing v0.1 functionality remains**, but the wire protocol is now **v2**, so older unencrypted clients cannot connect.
+
+## Security limitations
+
+This is still a **development prototype, not a production-hardened public server**.
+
+- Server-side TLS uses a locally generated self-signed certificate. Every client must verify its fingerprint **out-of-band**. A changed fingerprint must be independently verified before connecting.
+- The server certificate's private key is stored locally in \`.fouroam/server-cert.pfx\`. Protect that file and the entire \`.fouroam\` folder using your operating system's permissions; never upload, share or back them up publicly.
+- The private config contains a salted password verifier, **not a plaintext password**. Clients send their password only through the pinned TLS channel.
+- Ban identities are **client-controlled installation tokens**, not accounts, hardware identifiers or verified identities. Users can generate a new token and bypass bans. Do not present these bans as an anti-cheat or identity verification mechanism.
+- The password is shared by all players. TLS protects it in transit, but anyone who learns it can connect unless another control rejects them.
+- LAN or VPN access is recommended; restrict the host's firewall. **Do not port-forward or expose the development server to the public internet.**
+- Do not transmit sensitive information or rely on the current protocol for hostile network environments.
 
 ## Requirements
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
-- Windows 10/11 (primary target). The standalone test server may also work on other supported .NET platforms.
-- No copy of GTA V is needed for these network-only tests.
+Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) on Windows 10/11.
 
-## Run the server
+## 1. Initialize a private session (first run only)
 
-From the repository root, open PowerShell or a terminal:
+From the repository root:
 
 ~~~powershell
 dotnet restore Fouroam-Server.slnx
+dotnet run --project src/Fouroam.Server -- init
+~~~
+
+Enter a session name and a password of **12–128 characters**. The password is entered without echoing it. Setup creates the private \`.fouroam/\` directory and displays the **TLS certificate fingerprint**. The password cannot be recovered from the verifier: if it is lost, you must set up a new configuration.
+
+**Never commit or share the local \`.fouroam/\` directory.** Its contents include the server private key and ban database.
+
+## 2. Start the server
+
+For local tests on one PC:
+
+~~~powershell
 dotnet run --project src/Fouroam.Server -- --bind 127.0.0.1 --port 7777
 ~~~
 
-For a **trusted LAN or private VPN** only, you can listen on all IPv4 interfaces:
+For a **trusted LAN or private Radmin VPN network**, with an appropriate firewall rule:
 
 ~~~powershell
 dotnet run --project src/Fouroam.Server -- --bind 0.0.0.0 --port 7777
 ~~~
 
-Port 7777 is a TCP port. Configure the host firewall to allow only your trusted network if you plan to connect from another PC. For Radmin VPN, the other players use the host's Radmin VPN IPv4 address. **Do not port-forward this prototype.**
+The server prints its TLS certificate fingerprint on startup. Compare it with the value displayed during setup.
 
-## Run a test client
+## 3. Connect a test client
 
-In another terminal, on the host computer:
+Open another terminal and paste the real fingerprint displayed by your host:
 
 ~~~powershell
-dotnet run --project src/Fouroam.Client.Test -- --host 127.0.0.1 --port 7777 --name Athilio
+dotnet run --project src/Fouroam.Client.Test -- --host 127.0.0.1 --port 7777 --name Athilio --fingerprint YOUR_64_CHARACTER_CERTIFICATE_SHA256
 ~~~
 
-From a second PC on the same trusted LAN/VPN, replace 127.0.0.1 with the host's **private LAN/VPN IPv4 address**.
+The client prompts for the session password privately. Do **not** supply a password as a command-line argument.
 
-Client commands:
+For a second machine on Radmin VPN, replace \`127.0.0.1\` with the host's **private Radmin IPv4 address**. Both computers must be on a trusted network, with the firewall restricted to the intended participants.
 
-| Input | Action |
+**Four test clients on the same PC:** each client needs a different identity file so that a single installation is not impersonated by four active connections:
+
+~~~powershell
+dotnet run --project src/Fouroam.Client.Test -- --host 127.0.0.1 --port 7777 --name Michael --fingerprint YOUR_FINGERPRINT --identity-file .fouroam-client/michael.key
+dotnet run --project src/Fouroam.Client.Test -- --host 127.0.0.1 --port 7777 --name Franklin --fingerprint YOUR_FINGERPRINT --identity-file .fouroam-client/franklin.key
+dotnet run --project src/Fouroam.Client.Test -- --host 127.0.0.1 --port 7777 --name Trevor --fingerprint YOUR_FINGERPRINT --identity-file .fouroam-client/trevor.key
+~~~
+
+Replace \`YOUR_FINGERPRINT\` with the actual 64-character SHA-256 fingerprint. The default identity is saved under the current Windows user's LocalAppData/Fouroam folder. Other users of the same computer should use their own profile or identity file. Do not share identity tokens.
+
+Client commands: \`/players\`, \`/ping\`, \`/quit\`, or type a short message to chat.
+
+## Server console commands
+
+Host-only commands are typed in the **server's terminal**, not in a client:
+
+| Command | Purpose |
 | --- | --- |
-| /players | Request connected-player list |
-| /ping | Measure round-trip delay |
-| /quit | Disconnect |
-| Any other nonempty text | Send a short chat message |
+| \`help\` | List commands |
+| \`status\` | Session and connected player count |
+| \`players\` | Names, IDs and shortened identity fingerprints |
+| \`kick 3 [reason]\` | Disconnect player ID 3 |
+| \`ban 3 [reason]\` | Ban that client's persistent identity and disconnect it |
+| \`bans\` | Show stored identity fingerprints |
+| \`unban ABCDEF12\` | Remove a uniquely matching ban by fingerprint prefix (at least 8 hex characters) |
+| \`say Hello\` | Broadcast an administrator announcement |
+| \`stop\` | Gracefully shut down |
 
-To stop the server, press **Ctrl+C**.
+**Player IDs are temporary connection identifiers.** For persistent bans, the server saves a fingerprint of the client's secret installation token in \`.fouroam/bans.json\`. A ban cannot prevent someone from creating a new client identity; there is no verified account system.
 
-## Automated tests
+## Build and smoke tests
 
 ~~~powershell
 dotnet build Fouroam-Server.slnx --configuration Release
 dotnet run --project tests/Fouroam.SmokeTests --configuration Release
 ~~~
 
-The test harness starts a server on localhost with an ephemeral port, connects four clients, checks that a fifth is rejected, verifies roster/ping/chat, then checks that a disconnected player frees a slot. The GitHub Actions workflow runs builds and smoke tests on Windows and Linux.
+The tests run entirely over localhost with a temporary TLS certificate and config. They verify the original chat/roster/ping features, full sessions, password rejection, host-only kick, ban persistence and unban. [GitHub Actions](https://github.com/Fouroam-Dev/Fouroam-Server/actions) runs the tests on Windows and Linux.
 
 ## Source layout
 
 ~~~text
-Fouroam-Server/
-├── src/
-│   ├── Fouroam.Server/       # TCP host and session manager
-│   ├── Fouroam.Client.Test/  # Interactive terminal test client
-│   └── Fouroam.Shared/      # Messages and bounded JSON protocol
-├── tests/
-│   └── Fouroam.SmokeTests/   # Integration smoke tests without third-party packages
-├── docs/
-│   └── ARCHITECTURE.md
-├── Fouroam-Server.slnx
-└── .github/workflows/dotnet.yml
+src/
+  Fouroam.Server/        TLS host, administrative console, config, bans, throttling
+  Fouroam.Client.Test/   Interactive pinned-TLS test client
+  Fouroam.Shared/        Versioned bounded JSON protocol and client identity
+tests/
+  Fouroam.SmokeTests/    Automated networking/security integration tests
+docs/
+  ARCHITECTURE.md        Protocol and threat model
 ~~~
-
-## Next milestones
-
-The immediate next step is to validate this standalone transport and improve networking security before investigating real-time synchronization. **GTA V integration and official story missions are not implemented or promised.** Any game-side integration must be evaluated for technical and legal compatibility first.
-
-Read [ROADMAP.md](ROADMAP.md), [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Legal notice
 
-Fouroam Server is an independent unofficial project, not affiliated with or endorsed by Rockstar Games, Take-Two Interactive, Valve or Epic Games. GTA V and related assets belong to their respective owners. The MIT license applies only to original project code and documentation and does not grant rights to proprietary game content or permit bypassing any platform rules.
+Fouroam Server is independent and unofficial; not affiliated with or endorsed by Rockstar Games, Take-Two Interactive, Valve or Epic Games. All GTA V assets and trademarks belong to their respective owners. The MIT license applies only to original source and documentation and does not authorize third-party game content or restricted modifications. GTA V integration, cooperative official missions and official platform achievements are **not implemented or promised**.
 
 ## License
 
-[MIT License](LICENSE). Copyright (c) 2026 Fouroam-Dev.
+[MIT](LICENSE), copyright (c) 2026 Fouroam-Dev.
