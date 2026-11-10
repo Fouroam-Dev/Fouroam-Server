@@ -1,48 +1,48 @@
 # Fouroam Server Roadmap
 
-This is a **proposed roadmap**, not a set of delivered features or deadlines.
+Status is based on the checked-in source code. Passing CI and real LAN/VPN testing are separate validation steps.
 
 ## Milestone 0 — Project foundation
 
-- [x] Publish the README and community documentation.
-- [x] Keep a MIT license for original work.
-- [ ] Confirm licensing and platform permissions for any GTA V integration.
-- [ ] Validate the initial technology stack and supported Windows versions.
+- [x] Publish README and community documentation.
+- [x] Keep an MIT license for original work.
+- [x] Select .NET 10 / C# for the standalone network prototype.
+- [ ] Review permissions for any GTA V integration and official story changes.
 
-## Milestone 1 — Standalone networking server
+## Milestone 1 — Standalone TCP networking prototype
 
-- [ ] Create a .NET solution and a basic Windows server.
-- [ ] Listen on a configurable host interface and port.
-- [ ] Define a small versioned network protocol.
-- [ ] Validate inputs and assign connection/session identifiers.
-- [ ] Limit sessions to four participants.
-- [ ] Handle clean disconnects and connection failures.
+- [x] Add .NET projects for server, test client and shared protocol.
+- [x] Implement configurable IPv4 bind address and TCP port.
+- [x] Define a bounded, versioned JSON-lines protocol.
+- [x] Assign unique IDs and validate names at connection time.
+- [x] Enforce a four-player maximum; reject the fifth.
+- [x] Implement join/leave, roster, diagnostic chat and ping messages.
+- [x] Handle disconnects and free player slots.
+- [x] Add integration smoke tests and a Windows/Linux build workflow.
+- [ ] Verify green builds and integration tests in GitHub Actions.
 
-## Milestone 2 — LAN and VPN validation
+## Milestone 2 — Private LAN/VPN validation
 
-- [ ] Build an independent console test client.
-- [ ] Connect two computers on the same LAN.
-- [ ] Repeat the test using a private VPN, such as Radmin VPN.
-- [ ] Test four concurrent connections and reconnection behavior.
-- [ ] Document configuration and firewall requirements.
+- [ ] Run the standalone server on a real Windows computer.
+- [ ] Connect a second physical computer on a trusted LAN.
+- [ ] Repeat with Radmin VPN and validate Windows firewall configuration.
+- [ ] Test malformed traffic, reconnections and poor network conditions.
+- [ ] Add optional authentication and encrypted transport before considering any broader exposure.
 
-## Milestone 3 — Real-time state research
+## Milestone 3 — Real-time synchronization research
 
-- [ ] Evaluate UDP for time-sensitive messages.
-- [ ] Design host authority, ordering and reliability behavior.
-- [ ] Prototype synchronization independently from GTA V.
-- [ ] Test under latency and packet loss.
+- [ ] Evaluate UDP and reliability mechanisms.
+- [ ] Design host authority, state replication and timeouts.
+- [ ] Test in an independent simulation before any game integration.
 
-## Milestone 4 — Game integration feasibility
+## Milestone 4 — GTA V integration feasibility
 
-- [ ] Identify an authorized and technically compatible integration method.
-- [ ] Confirm support and limitations for game editions and versions.
-- [ ] Document legal restrictions before distributing integrations.
-- [ ] Evaluate original co-op activities within applicable permissions.
+- [ ] Determine a legally permitted and compatible method, if any.
+- [ ] Document GTA V edition and version limitations.
+- [ ] Scope only authorized integration experiments.
 
-## Out of scope for initial releases
+## Not promised
 
-- Public server discovery or paid hosted services.
-- GTA Online replacement, pirated copies or platform bypasses.
-- Guaranteed official story campaign synchronization.
-- Guaranteed official Steam or Epic Games achievements.
+- Official GTA V story mission synchronization.
+- Steam/Epic official achievement integration.
+- GTA Online compatibility, public matchmaking, or paid server hosting.

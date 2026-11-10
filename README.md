@@ -4,98 +4,112 @@
 
 **Your session. Your machine. Your rules.**
 
-An open-source, self-hosted networking server for [Fouroam-V](https://github.com/Fouroam-Dev/Fouroam-V), a research-stage project exploring private cooperative sessions for up to four friends.
+A self-hosted networking prototype for [Fouroam-V](https://github.com/Fouroam-Dev/Fouroam-V), an independent project exploring small private cooperative sessions.
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Project status](https://img.shields.io/badge/status-planning-orange.svg)
-![Target platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Development](https://img.shields.io/badge/stage-0.1.0--dev-orange.svg)
+![.NET](https://img.shields.io/badge/.NET-10-purple.svg)
+![GTA V](https://img.shields.io/badge/GTA%20V-integration%20not%20implemented-lightgrey.svg)
+[![.NET CI](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/dotnet.yml)
 
 [English](README.md) · [Português](README.pt-BR.md) · [Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md)
 
 </div>
 
 > [!IMPORTANT]
-> **Planning / pre-alpha.** No functional or downloadable server exists yet. All capabilities below are design goals, not implemented features.
+> **Standalone networking proof of concept, not a GTA V multiplayer mod.** The source now contains a TCP server, a CLI test client and a smoke-test harness. It does **not** connect to GTA V, sync its world or enable story co-op. There is no downloadable installer or release yet. Compilation and test results are tracked by GitHub Actions.
 
-## Overview
+## What works in the current source
 
-Fouroam Server aims to let one player host a **small, private session on their own PC**, with up to three friends joining through LAN or a private VPN such as Radmin VPN. A VPS may also be supported as an optional hosting choice.
+- A self-hosted TCP server using **C# / .NET 10**.
+- Up to **four concurrent players**, enforced server-side.
+- Player identification, bounded name validation and a versioned handshake.
+- Join/leave notifications, a player list, chat and ping/pong for diagnostics.
+- Framed JSON messages with a 4096-byte size limit and a basic command rate limit.
+- A standalone CLI client, plus automated smoke tests for capacity, reconnect, ping and chat.
+- Bind to loopback by default, or explicitly bind to a LAN/VPN interface.
 
-The project does not aim to replace GTA Online, provide public matchmaking, or require paid hosting.
+**Security limitations:** this development prototype has **no authentication, session passwords or encryption**. Never expose it directly to the public internet, forward its port, or connect over untrusted networks. Restrict access with your firewall and a trusted LAN or private VPN only. Do not use it for sensitive data.
 
-## Planned capabilities
+## Requirements
 
-| Capability | Status |
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+- Windows 10/11 (primary target). The standalone test server may also work on other supported .NET platforms.
+- No copy of GTA V is needed for these network-only tests.
+
+## Run the server
+
+From the repository root, open PowerShell or a terminal:
+
+~~~powershell
+dotnet restore Fouroam-Server.slnx
+dotnet run --project src/Fouroam.Server -- --bind 127.0.0.1 --port 7777
+~~~
+
+For a **trusted LAN or private VPN** only, you can listen on all IPv4 interfaces:
+
+~~~powershell
+dotnet run --project src/Fouroam.Server -- --bind 0.0.0.0 --port 7777
+~~~
+
+Port 7777 is a TCP port. Configure the host firewall to allow only your trusted network if you plan to connect from another PC. For Radmin VPN, the other players use the host's Radmin VPN IPv4 address. **Do not port-forward this prototype.**
+
+## Run a test client
+
+In another terminal, on the host computer:
+
+~~~powershell
+dotnet run --project src/Fouroam.Client.Test -- --host 127.0.0.1 --port 7777 --name Athilio
+~~~
+
+From a second PC on the same trusted LAN/VPN, replace 127.0.0.1 with the host's **private LAN/VPN IPv4 address**.
+
+Client commands:
+
+| Input | Action |
 | --- | --- |
-| Local Windows server process | Planned |
-| Maximum of four players | Planned |
-| LAN and private VPN connectivity | Planned |
-| Optional VPS self-hosting | Planned |
-| Connection management, player IDs and capacity limits | Planned |
-| Safe server logs and reconnect handling | Planned |
-| Real-time state synchronization | Under research |
-| Authorized GTA V integration | Requires feasibility and permissions review |
-| Official story mission synchronization | Not available or guaranteed |
-| Official Steam/Epic achievements | Not supported or promised |
+| /players | Request connected-player list |
+| /ping | Measure round-trip delay |
+| /quit | Disconnect |
+| Any other nonempty text | Send a short chat message |
 
-## Intended session flow
+To stop the server, press **Ctrl+C**.
 
-1. One friend starts the future Fouroam Server process on a Windows PC.
-2. Other players join the same local network or a private VPN.
-3. Clients connect to the host's private IP address and configured port.
-4. The host manages session state with a limit of four participants.
+## Automated tests
 
-No central service or hosting subscription should be necessary for local sessions. Each participant would still need a legitimate game copy and any game-side integration must be properly authorized.
+~~~powershell
+dotnet build Fouroam-Server.slnx --configuration Release
+dotnet run --project tests/Fouroam.SmokeTests --configuration Release
+~~~
 
-## Proposed technical direction
+The test harness starts a server on localhost with an ephemeral port, connects four clients, checks that a fifth is rejected, verifies roster/ping/chat, then checks that a disconnected player frees a slot. The GitHub Actions workflow runs builds and smoke tests on Windows and Linux.
 
-The first milestone will be a **standalone network prototype independent of GTA V**. The current proposal is:
+## Source layout
 
-- **C# / .NET 10** for the Windows server.
-- **TCP** to validate connections, session capacity and disconnect behavior.
-- Evaluation of **UDP** for later real-time state replication.
-- Server-authoritative state, strict message validation and minimal private logs.
-
-These are not final decisions. **There are currently no installation, build or launch instructions because the executable has not been developed.**
-
-## Proposed repository structure
-
-```text
+~~~text
 Fouroam-Server/
-├── src/                     # Future server and shared protocol
-├── tests/                   # Future networking tests
+├── src/
+│   ├── Fouroam.Server/       # TCP host and session manager
+│   ├── Fouroam.Client.Test/  # Interactive terminal test client
+│   └── Fouroam.Shared/      # Messages and bounded JSON protocol
+├── tests/
+│   └── Fouroam.SmokeTests/   # Integration smoke tests without third-party packages
 ├── docs/
 │   └── ARCHITECTURE.md
-├── README.md
-├── README.pt-BR.md
-├── ROADMAP.md
-├── CONTRIBUTING.md
-├── CODE_OF_CONDUCT.md
-├── SECURITY.md
-└── LICENSE
-```
+├── Fouroam-Server.slnx
+└── .github/workflows/dotnet.yml
+~~~
 
-The `src/` and `tests/` folders are proposed, not implemented.
+## Next milestones
 
-## Development and contribution
+The immediate next step is to validate this standalone transport and improve networking security before investigating real-time synchronization. **GTA V integration and official story missions are not implemented or promised.** Any game-side integration must be evaluated for technical and legal compatibility first.
 
-We welcome architecture discussions, independent networking prototypes, documentation contributions and security reviews.
-
-- [Development roadmap](ROADMAP.md)
-- [Architecture proposal](docs/ARCHITECTURE.md)
-- [Contributing guidelines](CONTRIBUTING.md)
-- [Code of conduct](CODE_OF_CONDUCT.md)
-- [Security policy](SECURITY.md)
-- [GitHub Issues](https://github.com/Fouroam-Dev/Fouroam-Server/issues)
+Read [ROADMAP.md](ROADMAP.md), [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Legal notice
 
-Fouroam Server is an **unofficial independent project**, not affiliated with or endorsed by Rockstar Games, Take-Two Interactive, Valve or Epic Games.
-
-GTA V, its assets and services remain the property of their respective owners. This repository's MIT license applies only to original material and **does not grant rights to proprietary game content, trademarks, code or platform services**. Game-side multiplayer modifications or official story missions may be restricted and require a permissions review before implementation or distribution.
-
-Do not submit copyrighted game assets, leaked code, authentication or anti-cheat bypasses, or pirated content.
+Fouroam Server is an independent unofficial project, not affiliated with or endorsed by Rockstar Games, Take-Two Interactive, Valve or Epic Games. GTA V and related assets belong to their respective owners. The MIT license applies only to original project code and documentation and does not grant rights to proprietary game content or permit bypassing any platform rules.
 
 ## License
 
-Original project code and documentation: [MIT](LICENSE), subject to third-party rights. Copyright (c) 2026 Fouroam-Dev.
+[MIT License](LICENSE). Copyright (c) 2026 Fouroam-Dev.

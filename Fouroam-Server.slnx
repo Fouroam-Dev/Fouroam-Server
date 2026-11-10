@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src/Fouroam.Shared/Fouroam.Shared.csproj" />
+  <Project Path="src/Fouroam.Server/Fouroam.Server.csproj" />
+  <Project Path="src/Fouroam.Client.Test/Fouroam.Client.Test.csproj" />
+  <Project Path="tests/Fouroam.SmokeTests/Fouroam.SmokeTests.csproj" />
+</Solution>
