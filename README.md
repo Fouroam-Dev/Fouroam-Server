@@ -7,7 +7,7 @@
 Self-hosted networking prototype for [Fouroam-V](https://github.com/Fouroam-Dev/Fouroam-V).
 
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.2.1--dev-orange.svg)
+![Version](https://img.shields.io/badge/version-0.2.2--dev-orange.svg)
 ![.NET](https://img.shields.io/badge/.NET-10-purple.svg)
 [![.NET CI](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/dotnet.yml)
 
@@ -28,6 +28,12 @@ Self-hosted networking prototype for [Fouroam-V](https://github.com/Fouroam-Dev/
 - **Expanded automated tests** for authentication, administrator commands, permission separation, identity bans, four-player capacity and original chat/ping behavior.
 
 **Existing v0.1 functionality remains**, but the wire protocol is now **v2**, so older unencrypted clients cannot connect.
+
+## First launch of the Windows executable
+
+When you launch `Fouroam.Server.exe` from a fresh extracted folder that has no `.fouroam` private settings, an interactive **first-run setup wizard** now starts automatically. Enter the session name and password; the server then starts normally. The separate `Fouroam.Server.exe init` command remains available if you prefer to configure first.
+
+**Existing installations are not modified.** The private `.fouroam` folder from your previous installation can be copied to your new executable folder to preserve its name, password, certificate fingerprint, and ban list. Keep it private and never upload it to GitHub. If there is no interactive terminal, the program explains how to initialize manually rather than silently creating files.
 
 ## Downloadable Windows x64 development EXEs
 

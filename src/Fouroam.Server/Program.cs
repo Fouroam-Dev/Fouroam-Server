@@ -48,6 +48,21 @@ internal static class Program
             }
         }
 
+        if (ServerSetup.NeedsInitialization(dataDir))
+        {
+            Console.WriteLine("[SETUP] No private session found in this folder.");
+            if (Console.IsInputRedirected)
+            {
+                Console.Error.WriteLine("[ERROR] Interactive first-run setup is unavailable with redirected input.");
+                Console.Error.WriteLine("[ERROR] Open a Command Prompt and run Fouroam.Server.exe init.");
+                return 1;
+            }
+
+            Console.WriteLine("[SETUP] Starting first-run setup. Your existing sessions in other folders will not be modified.");
+            if (Initialize(dataDir) != 0) return 1;
+            Console.WriteLine("[SETUP] Configuration complete. Starting your server...");
+        }
+
         try
         {
             var settings = ServerSettings.Load(dataDir);
@@ -88,52 +103,31 @@ internal static class Program
 
     private static int Initialize(string dataDir)
     {
-        if (File.Exists(ServerSettings.ConfigPath(dataDir)))
-        {
-            Console.Error.WriteLine("Server already initialized. Refusing to overwrite credentials.");
-            return 1;
-        }
-
         if (Console.IsInputRedirected)
         {
-            Console.Error.WriteLine("Initialization requires an interactive terminal to enter a secret safely.");
+            Console.Error.WriteLine("[ERROR] Setup requires an interactive Command Prompt.");
             return 1;
         }
 
-        try
-        {
-            Console.Write("Session name [Fouroam Private Session]: ");
-            string name = Console.ReadLine() is { Length: > 0 } response
-                ? response : "Fouroam Private Session";
-
-            Console.Write("Password (4-128 characters; hidden): ");
-            string password = ReadSecret();
-            if (password.Length < 12)
-                Console.WriteLine("[SECURITY] Short password: suitable only for a trusted private LAN/VPN. A longer password is strongly recommended.");
-            Console.Write("Confirm password (hidden): ");
-            string confirmation = ReadSecret();
-            if (password != confirmation)
+        return ServerSetup.TryInitialize(
+            dataDir,
+            () =>
             {
-                Console.Error.WriteLine("Passwords do not match.");
-                return 1;
-            }
-
-            var settings = ServerSettings.Create(name, password);
-            settings.Save(dataDir);
-            using var certificate = LocalCertificate.LoadOrCreate(dataDir);
-
-            Console.WriteLine($"[SETUP] Private session: {settings.SessionName}");
-            Console.WriteLine($"[SETUP] Config saved in {dataDir}");
-            Console.WriteLine($"[SETUP] TLS SHA-256 fingerprint: {LocalCertificate.Fingerprint(certificate)}");
-            Console.WriteLine("[SETUP] Never upload the .fouroam directory to GitHub.");
-            return 0;
-        }
-        catch (Exception ex) when (ex is IOException or ArgumentException or
-            UnauthorizedAccessException or System.Security.Cryptography.CryptographicException)
-        {
-            Console.Error.WriteLine($"[ERROR] {ex.Message}");
-            return 1;
-        }
+                Console.Write("Session name [Fouroam Private Session]: ");
+                return Console.ReadLine();
+            },
+            () =>
+            {
+                Console.Write("Password (4-128 characters; hidden): ");
+                return ReadSecret();
+            },
+            () =>
+            {
+                Console.Write("Confirm password (hidden): ");
+                return ReadSecret();
+            },
+            Console.WriteLine,
+            Console.Error.WriteLine) ? 0 : 1;
     }
 
     private static string ReadSecret()
@@ -159,9 +153,11 @@ internal static class Program
 
     private static void PrintUsage()
     {
-        Console.WriteLine("Fouroam Server v0.2.1-dev (TLS-only standalone prototype)");
-        Console.WriteLine("First time: dotnet run --project src/Fouroam.Server -- init");
-        Console.WriteLine("Run: dotnet run --project src/Fouroam.Server -- [--bind IP] [--port PORT]");
+        Console.WriteLine("Fouroam Server v0.2.2-dev (TLS-only standalone prototype)");
+        Console.WriteLine("First launch: interactive setup starts automatically when .fouroam is missing.");
+        Console.WriteLine("Manual setup: Fouroam.Server.exe init");
+        Console.WriteLine("Run packaged EXE: Fouroam.Server.exe [--bind IP] [--port PORT]");
+        Console.WriteLine("Run from source: dotnet run --project src/Fouroam.Server -- [--bind IP] [--port PORT]");
         Console.WriteLine("Defaults: --bind 127.0.0.1 --port 7777");
         Console.WriteLine("Trusted LAN/VPN: --bind 0.0.0.0 --port 7777 (use firewall restrictions)");
     }

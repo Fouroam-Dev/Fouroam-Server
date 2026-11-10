@@ -7,7 +7,7 @@
 Protótipo de servidor de rede auto-hospedado para o [Fouroam-V](https://github.com/Fouroam-Dev/Fouroam-V).
 
 [![MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-0.2.1--dev-orange.svg)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-0.2.2--dev-orange.svg)
 ![.NET](https://img.shields.io/badge/.NET-10-purple.svg)
 [![.NET CI](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Fouroam-Dev/Fouroam-Server/actions/workflows/dotnet.yml)
 
@@ -28,6 +28,12 @@ Protótipo de servidor de rede auto-hospedado para o [Fouroam-V](https://github.
 - **Testes automatizados** para expulsão, permissões, senha, banimentos e funções antigas.
 
 O servidor mantém chat, ping, lista de jogadores e limite de quatro conexões, mas a mudança para **protocolo v2** impede a conexão dos clientes antigos sem TLS.
+
+## Inicialização automática do executável
+
+Na primeira execução do `Fouroam.Server.exe`, se a pasta `.fouroam` ainda não existir, o programa **abre o assistente de configuração automaticamente**. Informe nome da sessão e senha; depois da configuração, o servidor inicia sem exigir `dotnet run` ou o comando `init`.
+
+Se você já tinha uma sessão como **VIADINHOS PLAY**, pode copiar a pasta privada `.fouroam` da instalação anterior para a pasta do novo executável. Assim mantém a senha, o certificado e os banimentos. **Nunca envie essa pasta a outras pessoas.**
 
 ## Executáveis Windows x64 para testes
 

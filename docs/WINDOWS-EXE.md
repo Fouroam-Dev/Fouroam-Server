@@ -20,8 +20,10 @@ Os artefatos são mantidos por **7 dias** depois da execução. O GitHub pode so
 Abra o **CMD** dentro da pasta que contém \`Fouroam.Server.exe\`.
 
 ~~~cmd
-Fouroam.Server.exe init
+Fouroam.Server.exe --bind 127.0.0.1 --port 7777
 ~~~
+
+**Nas novas versões, a configuração inicia automaticamente quando não existe `.fouroam`.** Informe o nome e a senha solicitados. Após concluir, o servidor começa a escutar na porta indicada. Também é possível criar a configuração separadamente com `Fouroam.Server.exe init`.
 
 Escolha nome e senha da sessão. Guarde o **fingerprint TLS SHA-256** exibido.
 

@@ -34,7 +34,9 @@ The roadmap distinguishes implemented source code from CI and real-network valid
 - [x] Support optional slash prefixes and unambiguous player names in local console commands.
 - [x] Add administration regression tests and documentation for EXE usage.
 - [ ] Confirm a successful Windows EXE artifact build on GitHub Actions.
-- [ ] Have a user test downloading and running the EXE without the SDK.
+- [x] Have a user test downloading and running the EXE without the SDK (original package reached the missing-private-config check).
+- [x] Add automatic interactive first-run setup when a freshly extracted EXE has no private configuration.
+- [ ] Validate the new first-run EXE against the Windows runner and retest it on a user's PC.
 
 ## 3. LAN and VPN testing
 

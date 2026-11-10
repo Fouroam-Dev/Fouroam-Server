@@ -39,6 +39,41 @@ internal static class Program
     private static async Task RunAsync(string dataDir)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(50));
+
+        // Regressions for a freshly downloaded EXE with no .fouroam directory.
+        string wizardDir = Path.Combine(dataDir, "fresh-exe");
+        Assert(ServerSetup.NeedsInitialization(wizardDir),
+            "Unconfigured portable folder must be detected on first run.");
+        var wizardMessages = new List<string>();
+        var wizardErrors = new List<string>();
+        Assert(ServerSetup.TryInitialize(
+            wizardDir, () => "Fresh Portable", () => "abcd", () => "abcd",
+            wizardMessages.Add, wizardErrors.Add),
+            "First-run wizard should create a valid private session.");
+        Assert(!ServerSetup.NeedsInitialization(wizardDir),
+            "New configuration must be found on subsequent launches.");
+        Assert(ServerSettings.Load(wizardDir).Verify("abcd"),
+            "First-run wizard must save the chosen password securely.");
+        Assert(File.Exists(LocalCertificate.CertificatePath(wizardDir)),
+            "First-run wizard must generate the host TLS certificate.");
+        Assert(!wizardMessages.Any(m => m.Contains("abcd")),
+            "Setup messages must not include the plaintext password.");
+        Assert(!ServerSetup.TryInitialize(
+            wizardDir, () => "Replace", () => "newpassword123", () => "newpassword123",
+            wizardMessages.Add, wizardErrors.Add),
+            "Reinitializing must never overwrite an existing session.");
+        Assert(ServerSettings.Load(wizardDir).SessionName == "Fresh Portable",
+            "Existing session must remain untouched.");
+
+        string mismatchDir = Path.Combine(dataDir, "mismatched-password");
+        Assert(!ServerSetup.TryInitialize(
+            mismatchDir, () => "Bad Setup", () => "abcd", () => "wxyz",
+            wizardMessages.Add, wizardErrors.Add),
+            "Mismatched passwords must not create a private session.");
+        Assert(ServerSetup.NeedsInitialization(mismatchDir),
+            "Failed first-run setup must not leave a config file.");
+        Console.WriteLine("[PASS] Portable first-run wizard, TLS setup and no overwrites.");
+
         // The minimum of 4 characters is intentional for small private sessions.
         var shortPasswordSettings = ServerSettings.Create("Short Pass", "abcd");
         Assert(shortPasswordSettings.Verify("abcd"), "Exactly four characters must be accepted.");
